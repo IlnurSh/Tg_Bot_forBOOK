@@ -2,20 +2,29 @@ import os
 import aiohttp
 import asyncio
 import uuid
-from dotenv import load_dotenv
+import base64
 import ssl
-import certifi
+from dotenv import load_dotenv
+
 
 # Загружаем переменные окружения
 load_dotenv()
-GIGACHAT_AUTH = os.getenv('GIGACHAT_AUTH_DATA')
+CLIENT_ID = os.getenv('GIGACHAT_CLIENT_ID')
+CLIENT_SECRET = os.getenv('GIGACHAT_SECRET')
 
-# Настройки SSL для безопасного соединения
-ssl_context = ssl.create_default_context(cafile=certifi.where())
-
+# URL и настройки
 AUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 CHAT_URL = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
 MODEL_NAME = "GigaChat-2-Max"
+
+# Настройки SSL (отключаем проверку для самоподписанного сертификата Сбера)
+ssl_context = ssl.create_default_context()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
+
+# Создаём Basic Auth строку
+auth_string = f"{CLIENT_ID}:{CLIENT_SECRET}"
+GIGACHAT_AUTH = base64.b64encode(auth_string.encode()).decode()
 
 
 async def get_access_token() -> str:
@@ -27,7 +36,7 @@ async def get_access_token() -> str:
         'Authorization': f'Basic {GIGACHAT_AUTH}',
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json',
-        'RqUID': str(uuid.uuid4())  # Уникальный ID запроса
+        'RqUID': str(uuid.uuid4())
     }
     
     data = {'scope': 'GIGACHAT_API_PERS'}
@@ -44,11 +53,8 @@ async def get_access_token() -> str:
 async def get_book_info(quote: str) -> str:
     """
     Определяет книгу по цитате.
-        quote (str): Цитата из книги
-        str: Информация о книге (название, автор, смысл)
     """
     try:
-        # Получаем токен
         access_token = await get_access_token()
         
         headers = {
@@ -82,25 +88,20 @@ async def get_book_info(quote: str) -> str:
         async with aiohttp.ClientSession() as session:
             async with session.post(CHAT_URL, headers=headers, json=data, ssl=ssl_context) as response:
                 if response.status != 200:
-                    error_text = await response.text()
                     return f"❌ Ошибка API: {response.status}"
                 
                 result = await response.json()
                 return result['choices'][0]['message']['content']
     
-    except Exception as e:
-        return f"❌ Не удалось определить книгу: {str(e)}"
+    except Exception:
+        return "❌ Не удалось определить книгу"
 
 
 async def get_similar_books(book_title: str, author: str) -> str:
     """
     Находит похожие книги.
-        book_title (str): Название исходной книги
-        author (str): Автор исходной книги
-        str: Список похожих книг с объяснениями
     """
     try:
-        # Получаем токен
         access_token = await get_access_token()
         
         headers = {
@@ -139,11 +140,10 @@ async def get_similar_books(book_title: str, author: str) -> str:
         async with aiohttp.ClientSession() as session:
             async with session.post(CHAT_URL, headers=headers, json=data, ssl=ssl_context) as response:
                 if response.status != 200:
-                    error_text = await response.text()
                     return f"❌ Ошибка API: {response.status}"
                 
                 result = await response.json()
                 return result['choices'][0]['message']['content']
     
-    except Exception as e:
-        return f"❌ Не удалось найти похожие книги: {str(e)}"
+    except Exception:
+        return "❌ Не удалось найти похожие книги"
