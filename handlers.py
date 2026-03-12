@@ -35,3 +35,24 @@ async def cmd_help(message:Message):
     Просто отправь цитату и увидишь магию! ✨
         """
     await message.answer(text,parse_mode='HTML')
+
+@user.message(F.text == 'Избранное')
+async def cmd_save(message: Message):
+    await message.answer("Избарнное добавим попозже после БД")
+
+
+@user.message(F.text)
+async def cmd_text(message: Message):
+    text = "ИИ чат сделает"
+    await message.bot.send_chat_action(message.chat.id, action="typing")
+    await message.answer(text, parse_mode='HTML')
+
+@user.callback_query(F.data.startswith('zitata'))
+async def zitatka(callback: CallbackQuery):
+    zitata_keyboard = callback.data.split('_')[1]
+    if zitata_keyboard == 'save':
+        await callback.answer("❤️ Функция сохранения появится позже!", show_alert=False)
+    elif zitata_keyboard == 'pohoji':
+        await callback.answer("📚 Функция похожих книг в разработке!", show_alert=False)
+
+    await callback.answer()
