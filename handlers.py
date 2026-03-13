@@ -111,11 +111,12 @@ async def zitatka(callback: CallbackQuery, state: FSMContext):
         if is_dublicate:
             await callback.message.answer("⚠️ Эта цитата уже есть в избранном!")
             await callback.answer()
-            return
+        else:
+            await callback.message.answer("✅ Добавлено в избранное!")
+            await callback.answer()
 
 
-        await callback.message.answer("✅ Добавлено в избранное!")
-        await callback.answer()
+
 
     elif zitata_keyboard == 'pohoji':
         data = await state.get_data()
