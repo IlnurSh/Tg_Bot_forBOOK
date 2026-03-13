@@ -2,13 +2,19 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext #fsm нужен чтобы цправлять состояниями
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart
-
+from aiogram.fsm.state import State, StatesGroup
 
 from gigachat_api import get_book_info, get_similar_books
 import keyboards
 from state import BookData
-from parsers import extract_book_info_simple, extract_similar_books_simple
+from parsers import extract_book_info_simple
+import database as db
 
+
+class AddQuote(StatesGroup):
+    waiting_for_quote = State()      # ждем текст цитаты
+    waiting_for_book = State()       # ждем название книги
+    waiting_for_author = State()     # ждем автора
 
 user = Router()
 
@@ -42,8 +48,27 @@ async def cmd_help(message:Message):
 
 @user.message(F.text == 'Избранное')
 async def cmd_save(message: Message):
-    await message.answer("Избарнное добавим попозже после БД")
+    user_id = message.from_user.id
+    favorites = await db.get_favorites(user_id)
 
+    if not favorites:
+        await message.answer("У вас нет избранных цитат пшл вн")
+        return
+
+    text = "твои избраные цитаты\n\n"
+    for fav in favorites:
+        id1 = fav[0]
+        quote1 = fav[1]
+        bookTitle1 = fav[2]
+        author1 = fav[3]
+
+        text += f"Id: {id1}\n"
+        text += f"Цитата: {quote1}\n"
+        text += f"Book: {bookTitle1}\n"
+        text += f"Author: {author1}\n"
+        text += f"----------------\n"
+
+    await message.answer(text)
 
 @user.message(F.text)
 async def cmd_text(message: Message, state: FSMContext):
@@ -70,8 +95,24 @@ async def cmd_text(message: Message, state: FSMContext):
 @user.callback_query(F.data.startswith('zitata'))
 async def zitatka(callback: CallbackQuery, state: FSMContext):
     zitata_keyboard = callback.data.split('_')[1]
+
     if zitata_keyboard == 'save':
-        await callback.answer("❤️ Функция сохранения появится позже!", show_alert=False)
+        data = await state.get_data()
+        
+        if not data:
+            return await callback.message.edit_text("❌ Ошибка: данные не найдены")
+        
+        await db.add_favorite(
+            user_id=callback.from_user.id,
+            quote=data['quote'] , 
+            book_title=data['title'],
+            author=data['author']
+        )
+
+        await callback.message.answer("✅ Добавлено в избранное!")
+        await state.clear()
+        await callback.answer()
+
     elif zitata_keyboard == 'pohoji':
         data = await state.get_data()
         title = data.get('title')
