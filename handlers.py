@@ -121,10 +121,6 @@ async def zitatka(callback: CallbackQuery, state: FSMContext):
             author=data['author']
         )
 
-        await callback.message.answer("✅ Добавлено в избранное!")
-        await callback.answer()
-
-
     elif zitata_keyboard == 'pohoji':
         data = await state.get_data()
         title = data.get('title')
