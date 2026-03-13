@@ -3,6 +3,7 @@ import asyncio
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
 from handlers import user
+import database as db
 
 load_dotenv()
 BOT_TOKEN = os.getenv('BOT_TOKEN')
@@ -12,6 +13,9 @@ dp = Dispatcher()
 dp.include_router(user)
 
 async def main():
+
+    await db.init_db()
+
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
