@@ -82,7 +82,7 @@ async def get_book_info(quote: str) -> str:
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.5,
-            "max_tokens": 600
+            "max_tokens": 400
         }
         
         async with aiohttp.ClientSession() as session:
@@ -134,7 +134,7 @@ async def get_similar_books(book_title: str, author: str) -> str:
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.8,
-            "max_tokens": 600
+            "max_tokens": 400
         }
         
         async with aiohttp.ClientSession() as session:
