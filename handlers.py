@@ -66,8 +66,8 @@ async def cmd_save(message: Message):
         text += f"Book: {bookTitle1}\n"
         text += f"Author: {author1}\n"
         text += f"----------------\n"
-
-    await message.answer(text)
+    
+    await message.answer(text, reply_markup=keyboards.delete_zitat)
 
 @user.message(F.text)
 async def cmd_text(message: Message, state: FSMContext):
@@ -121,6 +121,7 @@ async def zitatka(callback: CallbackQuery, state: FSMContext):
             author=data['author']
         )
 
+
     elif zitata_keyboard == 'pohoji':
         data = await state.get_data()
         title = data.get('title')
@@ -141,3 +142,26 @@ async def zitatka(callback: CallbackQuery, state: FSMContext):
         except Exception as e:
             await processing.delete()
             await callback.message.answer("❌ Ошибка")
+
+
+@user.callback_query(F.data == 'deletee')  
+async def deletee(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    
+    favorites = await db.get_favorites(user_id)
+    
+    if not favorites:
+        await callback.message.answer("У вас нет цитат для удаления")
+        await callback.answer()
+        return
+    
+    last_quote_id = favorites[0][0]
+    
+    deleted = await db.delete_favorite(user_id, last_quote_id)
+    
+    if deleted:
+        await callback.message.answer("✅ Последняя цитата удалена!")
+    else:
+        await callback.message.answer("❌ Ошибка при удалении")
+    
+    await callback.answer()

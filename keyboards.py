@@ -14,3 +14,9 @@ zizata = InlineKeyboardMarkup(
         [InlineKeyboardButton(text='📚 3 похожие книги', callback_data='zitata_pohoji')]
     ]
 )
+
+delete_zitat=InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="Удалить последнюю цитату", callback_data = 'deletee')]
+    ]
+)
