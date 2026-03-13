@@ -6,7 +6,6 @@ from aiogram.fsm.state import State, StatesGroup
 
 from gigachat_api import get_book_info, get_similar_books
 import keyboards
-from state import BookData
 from parsers import extract_book_info_simple
 import database as db
 
@@ -101,16 +100,21 @@ async def zitatka(callback: CallbackQuery, state: FSMContext):
         
         if not data:
             return await callback.message.edit_text("❌ Ошибка: данные не найдены")
-        
-        await db.add_favorite(
+    
+        is_dublicate = await db.add_favorite(
             user_id=callback.from_user.id,
             quote=data['quote'] , 
             book_title=data['title'],
             author=data['author']
         )
 
+        if is_dublicate:
+            await callback.message.answer("⚠️ Эта цитата уже есть в избранном!")
+            await callback.answer()
+            return
+
+
         await callback.message.answer("✅ Добавлено в избранное!")
-        await state.clear()
         await callback.answer()
 
     elif zitata_keyboard == 'pohoji':

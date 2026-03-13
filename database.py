@@ -52,3 +52,14 @@ async def delete_favorite(user_id: int, quote_id: int):
         )
         await db.commit()
         return cursor.rowcount > 0
+    
+async def check_duplicate(user_id: int, quote: str, book_title: str, author: str):
+    """Проверяет, есть ли уже такая цитата у пользователя"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "SELECT id FROM favorites WHERE user_id = ? AND quote = ? AND book_title = ? AND author = ?",
+            (user_id, quote, book_title, author)
+        )
+        existing = await cursor.fetchone()
+        await cursor.close()
+        return existing is not None  # True если уже есть
