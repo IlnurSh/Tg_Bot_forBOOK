@@ -101,21 +101,29 @@ async def zitatka(callback: CallbackQuery, state: FSMContext):
         if not data:
             return await callback.message.edit_text("❌ Ошибка: данные не найдены")
     
-        is_dublicate = await db.add_favorite(
+        # Проверка на дубликат
+        is_duplicate = await db.check_duplicate(
             user_id=callback.from_user.id,
-            quote=data['quote'] , 
+            quote=data['quote'],
+            book_title=data['title'],
+            author=data['author']
+        )
+        
+        if is_duplicate:
+            await callback.message.answer("⚠️ Эта цитата уже есть в избранном!")
+            await callback.answer()
+            return
+        
+        await db.add_favorite(
+            user_id=callback.from_user.id,
+            quote=data['quote'], 
             book_title=data['title'],
             author=data['author']
         )
 
-        if is_dublicate:
-            await callback.message.answer("⚠️ Эта цитата уже есть в избранном!")
-            await callback.answer()
-            return
-
-
         await callback.message.answer("✅ Добавлено в избранное!")
         await callback.answer()
+
 
     elif zitata_keyboard == 'pohoji':
         data = await state.get_data()
