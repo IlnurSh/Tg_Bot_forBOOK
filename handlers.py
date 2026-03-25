@@ -1,5 +1,5 @@
 from aiogram import F, Router
-from aiogram.fsm.context import FSMContext #fsm нужен чтобы цправлять состояниями
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import CommandStart
 from aiogram.fsm.state import State, StatesGroup
@@ -11,23 +11,20 @@ import database as db
 
 
 class AddQuote(StatesGroup):
-    waiting_for_quote = State()      # ждем текст цитаты
-    waiting_for_book = State()       # ждем название книги
-    waiting_for_author = State()     # ждем автора
+    waiting_for_quote = State()
+    waiting_for_book = State()
+    waiting_for_author = State()
 
 user = Router()
 
-# @user.message()
-# async def echo(message:Message):
-#     await message.send_copy(chat_id=message.from_user.id) эхо
-
 
 @user.message(CommandStart())
-async def cmd_start(message:Message):
+async def cmd_start(message: Message):
     await message.answer("Добро пожаловать в BookWiseBot", reply_markup=keyboards.menu)
 
+
 @user.message(F.text == 'Как это работает?')
-async def cmd_help(message:Message):
+async def cmd_help(message: Message):
     text = """
     📚 <b>Как работает BookWiseBot:</b>
 
@@ -42,8 +39,9 @@ async def cmd_help(message:Message):
     • Найти похожие книги 📖
 
     Просто отправь цитату и увидишь магию! ✨
-        """
-    await message.answer(text,parse_mode='HTML')
+    """
+    await message.answer(text, parse_mode='HTML')
+
 
 @user.message(F.text == 'Избранное')
 async def cmd_save(message: Message):
@@ -51,33 +49,37 @@ async def cmd_save(message: Message):
     favorites = await db.get_favorites(user_id)
 
     if not favorites:
-        await message.answer("У вас нет избранных цитат пшл вн")
+        await message.answer("У вас нет избранных цитат")
         return
 
-    text = "твои избраные цитаты\n\n"
+    text = "❤️ Твои избранные цитаты:\n\n"
     for fav in favorites:
         id1 = fav[0]
         quote1 = fav[1]
         bookTitle1 = fav[2]
         author1 = fav[3]
 
-        text += f"Id: {id1}\n"
-        text += f"Цитата: {quote1}\n"
-        text += f"Book: {bookTitle1}\n"
-        text += f"Author: {author1}\n"
+        text += f"🆔 {id1}\n"
+        text += f"📝 Цитата: {quote1}\n"
+        text += f"📖 Книга: {bookTitle1}\n"
+        text += f"✍️ Автор: {author1}\n"
         text += f"----------------\n"
     
     await message.answer(text, reply_markup=keyboards.delete_zitat)
 
+
 @user.message(F.text)
 async def cmd_text(message: Message, state: FSMContext):
+    # 👇 ОТЛАДКА
+    print(f"📩 ПОЛУЧЕНО СООБЩЕНИЕ: {message.text[:50]}")
+    
     await message.bot.send_chat_action(message.chat.id, action="typing")
     processing = await message.answer("🔍 Ищу информацию о книге...")
     try:
-        result = await get_book_info(message.text)#ищет у ии ответ по промту 
-        book_info = extract_book_info_simple(result) #вытаскивает название и автора
+        result = await get_book_info(message.text)
+        book_info = extract_book_info_simple(result)
         
-        await state.update_data( #сохраняет назване и автора
+        await state.update_data(
             quote=message.text,
             title=book_info['title'],
             author=book_info['author']
@@ -86,9 +88,9 @@ async def cmd_text(message: Message, state: FSMContext):
         await processing.delete()
         await message.answer(result, parse_mode="HTML", reply_markup=keyboards.zizata)
     except Exception as e:
+        print(f"❌ ОШИБКА В cmd_text: {e}")  # 👈 ОТЛАДКА
         await processing.delete()
         await message.answer(f"❌ Произошла ошибка")
-
 
 
 @user.callback_query(F.data.startswith('zitata'))
@@ -101,7 +103,6 @@ async def zitatka(callback: CallbackQuery, state: FSMContext):
         if not data:
             return await callback.message.edit_text("❌ Ошибка: данные не найдены")
     
-        # Проверка на дубликат
         is_duplicate = await db.check_duplicate(
             user_id=callback.from_user.id,
             quote=data['quote'],
@@ -121,7 +122,6 @@ async def zitatka(callback: CallbackQuery, state: FSMContext):
             author=data['author']
         )
 
-
     elif zitata_keyboard == 'pohoji':
         data = await state.get_data()
         title = data.get('title')
@@ -140,6 +140,7 @@ async def zitatka(callback: CallbackQuery, state: FSMContext):
             await processing.delete()
             await callback.message.answer(result, parse_mode="HTML")
         except Exception as e:
+            print(f"❌ ОШИБКА В ПОХОЖИХ: {e}")  # 👈 ОТЛАДКА
             await processing.delete()
             await callback.message.answer("❌ Ошибка")
 
