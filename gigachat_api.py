@@ -9,6 +9,11 @@ from dotenv import load_dotenv
 
 # Загружаем переменные окружения
 load_dotenv()
+
+# 👇 ОТЛАДКА ПЕРЕМЕННЫХ
+print(f"🔍 CLIENT_ID: {os.getenv('GIGACHAT_CLIENT_ID')}")
+print(f"🔍 CLIENT_SECRET: {os.getenv('GIGACHAT_SECRET')[:10] if os.getenv('GIGACHAT_SECRET') else 'None'}...")
+
 CLIENT_ID = os.getenv('GIGACHAT_CLIENT_ID')
 CLIENT_SECRET = os.getenv('GIGACHAT_SECRET')
 
@@ -17,7 +22,7 @@ AUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 CHAT_URL = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
 MODEL_NAME = "GigaChat-2-Max"
 
-# Настройки SSL (отключаем проверку для самоподписанного сертификата Сбера)
+# Настройки SSL
 ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
@@ -28,10 +33,6 @@ GIGACHAT_AUTH = base64.b64encode(auth_string.encode()).decode()
 
 
 async def get_access_token() -> str:
-    """
-    Получает токен доступа к GigaChat.
-    Токен действует 30 минут.
-    """
     headers = {
         'Authorization': f'Basic {GIGACHAT_AUTH}',
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -51,10 +52,9 @@ async def get_access_token() -> str:
 
 
 async def get_book_info(quote: str) -> str:
-    """
-    Определяет книгу по цитате.
-    """
     try:
+        print(f"🔍 get_book_info вызвана для: {quote[:50]}...")  # 👈 ОТЛАДКА
+        
         access_token = await get_access_token()
         
         headers = {
@@ -88,19 +88,19 @@ async def get_book_info(quote: str) -> str:
         async with aiohttp.ClientSession() as session:
             async with session.post(CHAT_URL, headers=headers, json=data, ssl=ssl_context) as response:
                 if response.status != 200:
+                    print(f"❌ Ошибка API: {response.status}")  # 👈 ОТЛАДКА
                     return f"❌ Ошибка API: {response.status}"
                 
                 result = await response.json()
+                print(f"✅ Ответ получен, длина: {len(result['choices'][0]['message']['content'])}")  # 👈 ОТЛАДКА
                 return result['choices'][0]['message']['content']
     
-    except Exception:
+    except Exception as e:
+        print(f"❌ ОШИБКА В get_book_info: {e}")  # 👈 ОТЛАДКА
         return "❌ Не удалось определить книгу"
 
 
 async def get_similar_books(book_title: str, author: str) -> str:
-    """
-    Находит похожие книги.
-    """
     try:
         access_token = await get_access_token()
         
@@ -145,5 +145,6 @@ async def get_similar_books(book_title: str, author: str) -> str:
                 result = await response.json()
                 return result['choices'][0]['message']['content']
     
-    except Exception:
+    except Exception as e:
+        print(f"❌ ОШИБКА В get_similar_books: {e}")  # 👈 ОТЛАДКА
         return "❌ Не удалось найти похожие книги"
